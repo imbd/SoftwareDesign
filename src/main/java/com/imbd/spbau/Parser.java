@@ -23,6 +23,7 @@ public class Parser {
             put("pwd", new Pwd());
             put("cat", new Cat());
             put("wc", new Wc());
+            put("grep", new Grep());
         }
     };
 
