@@ -10,6 +10,9 @@ import java.util.Objects;
 
 public class Token {
 
+    /**
+     * Enumeration for types of token
+     */
     public enum Type {
 
         TEXT,
@@ -23,19 +26,19 @@ public class Token {
     private Type type;
     private String content;
 
-    Token(Type type, String content) {
+    public Token(Type type, String content) {
 
         this.type = type;
         this.content = content;
     }
 
 
-    Type getType() {
+    public Type getType() {
 
         return type;
     }
 
-    String getContent() {
+    public String getContent() {
 
         return content;
     }

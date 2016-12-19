@@ -24,7 +24,7 @@ public class Wc implements Command {
      */
 
     @Override
-    public InputStream execute(List<String> args, InputStream inputData) throws SyntaxException {
+    public InputStream execute(List<String> args, InputStream inputData) {
 
         String outputData = "";
         int length = args.size();
@@ -43,7 +43,7 @@ public class Wc implements Command {
             try {
                 outputData += (countAnswer(new String(Files.readAllBytes(Paths.get(args.get(i))), StandardCharsets.UTF_8)));
             } catch (IOException e) {
-                throw new SyntaxException("No such file or no permission error in a cat execution");
+                new SyntaxException("No such file or no permission error in a cat execution").printStackTrace();
             }
         }
 

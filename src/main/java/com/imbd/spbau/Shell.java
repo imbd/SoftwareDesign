@@ -45,6 +45,11 @@ public class Shell {
 
         String outputData = "";
         try {
+            outputData = IOUtils.toString(new ByteArrayInputStream("".getBytes()), "UTF-8");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
             outputData = IOUtils.toString(inputStream, "UTF-8");
         } catch (IOException e) {
             e.printStackTrace();

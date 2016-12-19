@@ -2,6 +2,7 @@ package com.imbd.spbau.commands;
 
 import com.imbd.spbau.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -19,16 +20,16 @@ public class ExternalCommand implements Command {
      */
 
     @Override
-    public InputStream execute(List<String> args, InputStream inputData) throws SyntaxException {
+    public InputStream execute(List<String> args, InputStream inputData) {
 
         ProcessBuilder processBuilder = new ProcessBuilder(args);
         Process process;
         try {
             process = processBuilder.start();
 
-
         } catch (IOException e) {
-            throw new SyntaxException("External command not found");
+            new SyntaxException("External command not found").printStackTrace();
+            return new ByteArrayInputStream("".getBytes());
         }
 
         try {

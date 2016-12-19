@@ -14,7 +14,6 @@ import java.util.stream.Collectors;
  * Class which performs execution
  */
 
-
 public class Parser {
 
     private static final Map<String, Command> ALL_COMMANDS = new HashMap<String, Command>() {
@@ -34,7 +33,11 @@ public class Parser {
      * @return result as an InputStream
      */
 
-    public InputStream execute(List<Token> tokens, Environment environment) throws SyntaxException {
+    public InputStream execute(List<Token> tokens, Environment environment) {
+
+        if (tokens.isEmpty()) {
+            return new ByteArrayInputStream("".getBytes());
+        }
 
         InputStream currentData = System.in;
 
@@ -51,9 +54,9 @@ public class Parser {
                 }
             }
 
-
             if (commandTokens.isEmpty()) {
-                throw new SyntaxException("Bad pipe construction");
+                new SyntaxException("Bad pipe construction").printStackTrace();
+                return new ByteArrayInputStream("".getBytes());
             }
 
             if (commandTokens.get(0).getType() == Token.Type.ASSIGNMENT) {
@@ -86,7 +89,8 @@ public class Parser {
         int index = content.indexOf('=');
 
         if (assignmentTokens.size() != 1 || index == -1) {
-            throw new SyntaxException("Bad assignment construction");
+            new SyntaxException("Bad assignment construction").printStackTrace();
+            return;
         }
 
         String variable = content.substring(0, index);

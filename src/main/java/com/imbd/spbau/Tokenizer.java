@@ -35,7 +35,7 @@ public class Tokenizer {
      * @return list of a resulting tokens
      */
 
-    public List<Token> parse(String inputLine) throws SyntaxException {
+    public List<Token> parse(String inputLine) {
 
         List<Token> tokens = new ArrayList<>();
 
@@ -76,7 +76,9 @@ public class Tokenizer {
 
                 } else {
 
-                    throw new SyntaxException("no pair for a quote");
+                    new SyntaxException("no pair for a quote").printStackTrace();
+                    tokens.clear();
+                    return tokens;
                 }
             }
 
@@ -216,7 +218,6 @@ public class Tokenizer {
 
                 if (variable.length() == 0) {
                     result += symbol;
-                    //throw new SyntaxException("Bad construction with a variable substitution"); // can be in grep
                 } else {
 
                     result += environment.getValue(variable);

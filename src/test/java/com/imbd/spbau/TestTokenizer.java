@@ -52,15 +52,6 @@ public class TestTokenizer {
                 new Token(Token.Type.SINGLE_QUOTE, "'$d'")));
     }
 
-    @Test(expected = SyntaxException.class)
-    public void testTokenParse4() {
-
-        Tokenizer tokenizer = new Tokenizer();
-
-        tokenizer.parse("echo \"123");
-
-    }
-
     @Test
     public void testSubstitution1() {
 

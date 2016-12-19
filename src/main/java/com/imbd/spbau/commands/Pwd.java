@@ -20,7 +20,7 @@ public class Pwd implements Command {
      */
 
     @Override
-    public InputStream execute(List<String> args, InputStream inputData) throws SyntaxException {
+    public InputStream execute(List<String> args, InputStream inputData) {
 
         if (args.size() != 1) {
             throw new SyntaxException("Wrong number of parameters in pwd");

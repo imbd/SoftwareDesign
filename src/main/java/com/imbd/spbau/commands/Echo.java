@@ -1,7 +1,5 @@
 package com.imbd.spbau.commands;
 
-import com.imbd.spbau.*;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.List;
@@ -19,7 +17,7 @@ public class Echo implements Command {
      */
 
     @Override
-    public InputStream execute(List<String> args, InputStream inputData) throws SyntaxException {
+    public InputStream execute(List<String> args, InputStream inputData) {
 
         String outputData = "";
 

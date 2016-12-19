@@ -1,8 +1,5 @@
 package com.imbd.spbau.commands;
 
-import com.imbd.spbau.*;
-
-
 import java.io.InputStream;
 import java.util.List;
 
@@ -12,6 +9,10 @@ import java.util.List;
 
 public interface Command {
 
-    InputStream execute(List<String> args, InputStream inputData)
-            throws SyntaxException;
+    /**
+     * @param args      given to command arguments; the first one is a command name
+     * @param inputData result of previous operations
+     * @return result of execution as InputStream
+     */
+    InputStream execute(List<String> args, InputStream inputData);
 }

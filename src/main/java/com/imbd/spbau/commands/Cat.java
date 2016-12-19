@@ -23,17 +23,21 @@ public class Cat implements Command {
      */
 
     @Override
-    public InputStream execute(List<String> args, InputStream inputData) throws SyntaxException {
+    public InputStream execute(List<String> args, InputStream inputData) {
 
         String outputData = "";
         int length = args.size();
 
+        if (length <= 1) {
+            return inputData;
+        }
         for (int i = 1; i < length; i++) {
 
             try {
                 outputData += new String(Files.readAllBytes(Paths.get(args.get(i))), StandardCharsets.UTF_8);
             } catch (IOException e) {
-                throw new SyntaxException("No such file or no permission error in a cat execution");
+                new SyntaxException("No such file or no permission error in a cat execution").printStackTrace();
+                return new ByteArrayInputStream("".getBytes());
             }
         }
 
