@@ -1,10 +1,11 @@
 package com.imbd.spbau.model;
 
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.Socket;
+import com.imbd.spbau.proto.ProtoMessage;
+import io.grpc.stub.StreamObserver;
+
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
@@ -19,18 +20,37 @@ public class Controller {
     }
 
     private static final Logger logger = Logger.getLogger(Controller.class.getName());
-    private static final int TIMEOUT_MS = 50;
+    private static final long DELAY = 500;
+    private static final long TIMEOUT = 1000;
 
-    private Consumer<Message> handleGettingMessage;
-    private Socket socket;
+    private Consumer<MessageInterface> handleGettingMessage;
+    private Consumer<MessageInterface> handleTypingNotification;
     private Type type;
-    private boolean disconnected = false;
-    private DataInputStream inputStream;
-    private DataOutputStream outputStream;
+    private long lastTypingTime;
+    private long lastConnectionCheckTime;
+    private String userName;
 
-    public void setDisconnected(boolean value) {
-        disconnected = value;
+    private StreamObserver<ProtoMessage> outputStreamObserver;
+    private StreamObserver<ProtoMessage> typingNotificationObserver;
+
+    /**
+     * Setting outputStreamObserver value
+     *
+     * @param outputStreamObserver value to set
+     */
+    public void setOutputStreamObserver(StreamObserver<ProtoMessage> outputStreamObserver) {
+        this.outputStreamObserver = outputStreamObserver;
     }
+
+    /**
+     * Setting typingNotificationObserver value
+     *
+     * @param typingNotificationObserver value to set
+     */
+    public void setTypingNotificationObserver(StreamObserver<ProtoMessage> typingNotificationObserver) {
+        this.typingNotificationObserver = typingNotificationObserver;
+    }
+
 
     public Controller(Type type) {
         this.type = type;
@@ -41,36 +61,58 @@ public class Controller {
     }
 
     /**
-     * Getting socket's streams and performing connection with 'companion'
+     * Getting message
      *
-     * @param socket controller's socket
+     * @param message message value
      */
-    public void run(Socket socket) {
-        logger.info("Controller is running");
-        disconnected = false;
-        this.socket = socket;
-        try {
-            inputStream = new DataInputStream(socket.getInputStream());
-            outputStream = new DataOutputStream(socket.getOutputStream());
-        } catch (IOException e) {
-            logger.info("Couldn't get streams");
-            return;
-        }
-        sendMessage(new Message(Message.CONNECTION_START, Settings.getInstance().getUserName()));
-        while (!disconnected) {
-            try {
-                getMessage();
-            } catch (Exception e) {
-                //logger.info("Couldn't get message: repeated operation that will clog logs");
-            }
+    public void getMessage(MessageInterface message) {
+        if (message.getType() == MessageInterface.CHECK_CONNECTION) {
+            lastConnectionCheckTime = System.currentTimeMillis();
+        } else {
+            handleGettingMessage.accept(message);
         }
     }
 
-    private Message getMessage() throws IOException {
-        //logger.info("Try to get message: repeated operation that will clog logs");
-        Message message = Message.read(inputStream);
-        handleGettingMessage.accept(message);
-        return message;
+    /**
+     * Getting typing notification
+     *
+     * @param message message value
+     */
+    public void getTypingNotification(MessageInterface message) {
+        logger.info("Getting typing notification");
+        if (!message.getText().isEmpty()) {
+            userName = message.getText();
+            lastTypingTime = System.currentTimeMillis();
+        }
+    }
+
+    /**
+     * Sending name and starting TimerTasks
+     */
+    public void run() {
+        logger.info("Controller is running");
+        lastConnectionCheckTime = System.currentTimeMillis();
+        sendMessage(new MessageInterface(MessageInterface.CONNECTION_START, Settings.getInstance().getUserName()));
+
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (System.currentTimeMillis() < lastTypingTime + TIMEOUT) {
+                    handleTypingNotification.accept(new MessageInterface(MessageInterface.TYPING_NOTIFICATION, userName));
+                } else {
+                    handleTypingNotification.accept(new MessageInterface(MessageInterface.TYPING_NOTIFICATION, ""));
+                }
+            }
+        }, DELAY, TIMEOUT);
+
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                sendMessage(new MessageInterface(MessageInterface.CHECK_CONNECTION, ""));
+            }
+        }, DELAY, TIMEOUT);
+
+
     }
 
     /**
@@ -79,24 +121,29 @@ public class Controller {
      * @param message Message that we want to send
      * @return true if was successfully sent else false
      */
-    public boolean sendMessage(Message message) {
+    public boolean sendMessage(MessageInterface message) {
 
-        try {
-            socket.setSoTimeout(TIMEOUT_MS);
-            if (inputStream.read() == -1) {
-                return false;
-            }
-        } catch (Exception e) {
-            logger.info("Time is out in connection check");
-        }
-        logger.info("Sending message");
-        try {
-            message.write(outputStream);
-        } catch (Exception e) {
-            logger.info("Couldn't send message");
+        if (outputStreamObserver == null || (lastConnectionCheckTime + TIMEOUT < System.currentTimeMillis())) {
             return false;
         }
+        outputStreamObserver.onNext(ProtoMessage.newBuilder().setType(message.getType()).setText(message.getText()).build());
         return true;
+
+    }
+
+    /**
+     * Sending typing notification
+     *
+     * @param message Message that we want to send
+     * @return true if was successfully sent else false
+     */
+    public boolean sendTypingNotification(MessageInterface message) {
+
+        if (typingNotificationObserver != null) {
+            typingNotificationObserver.onNext(ProtoMessage.newBuilder().setType(message.getType()).setText(message.getText()).build());
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -104,9 +151,19 @@ public class Controller {
      *
      * @param handleGettingMessage operation that will be got from UI
      */
-    public void afterGettingMessage(Consumer<Message> handleGettingMessage) {
+    public void afterGettingMessage(Consumer<MessageInterface> handleGettingMessage) {
         logger.info("Handle getting message");
         this.handleGettingMessage = handleGettingMessage;
+    }
+
+    /**
+     * Specify operation that runs after receiving typing notification
+     *
+     * @param handleTypingNotification operation that will be got from UI
+     */
+    public void afterGettingNotification(Consumer<MessageInterface> handleTypingNotification) {
+        logger.info("Handle typing notification");
+        this.handleTypingNotification = handleTypingNotification;
     }
 
 }

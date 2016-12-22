@@ -23,8 +23,8 @@ public class StartFrame {
         JButton serverButton = new JButton("<html><b><font color=\"red\">Server</font></b></html>");
         serverButton.addActionListener(e -> {
             Controller controller = new Controller(Controller.Type.SERVER);
-            Server server = new Server(controller, Settings.getInstance().getConnectionPort());
-            new ChatFrame(controller, server::start, server::stop);
+            MessengerServer messengerServer = new MessengerServer(controller, Settings.getInstance().getConnectionPort());
+            new ChatFrame(controller, messengerServer::start, messengerServer::stop);
         });
         JButton clientButton = new JButton("<html><b><font color=\"blue\">Client</font></b></html>");
         clientButton.addActionListener(e -> {

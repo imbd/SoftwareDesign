@@ -1,8 +1,12 @@
 package com.imbd.spbau.model;
 
-import java.io.IOException;
+import io.grpc.ManagedChannel;
+import com.imbd.spbau.proto.*;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
+
 import java.net.InetAddress;
-import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.logging.Logger;
 
 /**
@@ -11,47 +15,75 @@ import java.util.logging.Logger;
 public class Client {
 
     private static final Logger logger = Logger.getLogger(Client.class.getName());
-    private Socket socket;
     private Controller controller;
+    private ManagedChannel channel;
 
     public Client(Controller controller) {
         this.controller = controller;
     }
 
     /**
-     * Connecting to server and running controller
+     * Connecting to server
      *
      * @param ip   server ip
      * @param port server port
      */
     public void connect(byte[] ip, int port) {
+        logger.info("Connecting to server");
         try {
-            logger.info("Connecting to server");
-            socket = new Socket(InetAddress.getByAddress(ip), port);
-        } catch (IOException e) {
-            logger.info("Couldn't connect to server");
-            return;
+            channel = ManagedChannelBuilder.forAddress(InetAddress.getByAddress(ip).getHostAddress(), port).usePlaintext(true).build();
+            MessengerGrpc.MessengerStub stub = MessengerGrpc.newStub(channel);
+
+            StreamObserver<ProtoMessage> outputStreamObserver = stub.messagesExchange(new StreamObserver<ProtoMessage>() {
+                @Override
+                public void onNext(ProtoMessage message) {
+                    controller.getMessage(new MessageInterface(message.getType(), message.getText()));
+
+                }
+
+                @Override
+                public void onError(Throwable throwable) {
+                    logger.info("Exception caught in service: " + throwable.getMessage());
+                }
+
+                @Override
+                public void onCompleted() {
+                }
+            });
+
+            StreamObserver<ProtoMessage> typingNotificationObserver = stub.typingNotification(new StreamObserver<ProtoMessage>() {
+                @Override
+                public void onNext(ProtoMessage message) {
+                    controller.getTypingNotification(new MessageInterface(message.getType(), message.getText()));
+                }
+
+                @Override
+                public void onError(Throwable throwable) {
+                    logger.info("Exception caught in service: " + throwable.getMessage());
+                }
+
+                @Override
+                public void onCompleted() {
+                }
+            });
+            controller.setOutputStreamObserver(outputStreamObserver);
+            controller.setTypingNotificationObserver(typingNotificationObserver);
+        } catch (UnknownHostException e) {
+            logger.info("Unknown host exception");
         }
-        controller.run(socket);
+        controller.run();
+
     }
 
     /**
      * Disconnecting from server
      */
     public void disconnect() {
-        controller.setDisconnected(true);
         logger.info("Client is disconnecting");
-        if (socket == null) {
-            return;
+        if (channel != null && !channel.isShutdown()) {
+            channel.shutdown();
+            channel = null;
         }
-        try {
-            if (!socket.isClosed()) {
-                logger.info("Closing socket");
-                socket.close();
-                socket = null;
-            }
-        } catch (IOException e) {
-            logger.info("Couldn't close socket");
-        }
+
     }
 }

@@ -4,6 +4,8 @@ import com.imbd.spbau.model.*;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -38,7 +40,7 @@ public class ChatFrame {
         frame.setSize(CHAT_FRAME_SIZE);
         sendButton = new JButton("<html><b><font color=\"black\">Send message</font></b></html>");
         sendButton.addActionListener(e -> {
-                    if (controller.sendMessage(new Message(Message.SIMPLE_MESSAGE, writeMessage.getText()))) {
+                    if (controller.sendMessage(new MessageInterface(MessageInterface.SIMPLE_MESSAGE, writeMessage.getText()))) {
                         chatHistory.append("You: " + writeMessage.getText() + '\n');
                         writeMessage.setText("");
                     } else {
@@ -56,6 +58,18 @@ public class ChatFrame {
         chatHistory.setEditable(false);
         writeMessage.setMaximumSize(WRITE_MESSAGE_MAX_SIZE);
         writeMessage.setPreferredSize(WRITE_MESSAGE_PREF_SIZE);
+        writeMessage.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                try {
+                    super.keyPressed(e);
+                    controller.sendTypingNotification(new MessageInterface(MessageInterface.TYPING_NOTIFICATION, companionName));
+                } catch (Exception exception) {
+                    //disconnected, but trying to type
+                }
+
+            }
+        });
 
         setAlignment();
         JPanel panel = new JPanel();
@@ -71,6 +85,7 @@ public class ChatFrame {
         frame.setVisible(true);
     }
 
+
     private void setAlignment() {
         sendButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         firstLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -81,12 +96,22 @@ public class ChatFrame {
     }
 
     private void fillFunctions(Controller controller) {
-        controller.afterGettingMessage((Message message) -> {
-            if (message.getType() == Message.CONNECTION_START) {
+        controller.afterGettingMessage((MessageInterface message) -> {
+            if (message.getType() == MessageInterface.CONNECTION_START) {
                 companionName = message.getText();
                 firstLabel.setText("Chat with " + companionName + "(as " + type + ")");
+                if (type.equals("server")) {
+                    controller.sendMessage(new MessageInterface(MessageInterface.CONNECTION_START, Settings.getInstance().getUserName()));
+                }
             } else {
                 chatHistory.append(companionName + ": " + message.getText() + '\n');
+            }
+        });
+        controller.afterGettingNotification((MessageInterface message) -> {
+            if (!message.getText().isEmpty()) {
+                firstLabel.setText(companionName + " is typing..");
+            } else {
+                firstLabel.setText("Chat with " + companionName + "(as " + type + ")");
             }
         });
     }

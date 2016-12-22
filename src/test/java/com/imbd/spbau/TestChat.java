@@ -9,102 +9,123 @@ import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class TestChat {
 
 
-    private static final int MS_TIMEOUT = 500;
-    private static final int SMALL_MS_TIMEOUT = 100;
-    private static final Message message1 = new Message(Message.SIMPLE_MESSAGE, "Text1");
-    private static final Message message2 = new Message(Message.SIMPLE_MESSAGE, "Text2");
-    private static final Message message3 = new Message(Message.SIMPLE_MESSAGE, "Text3");
-    private static final Message message4 = new Message(Message.SIMPLE_MESSAGE, "Text4");
+    private static final int MS_TIMEOUT = 2500;
+    private static final int SMALL_MS_TIMEOUT = 500;
+    private static final MessageInterface MESSAGE_1 = new MessageInterface(MessageInterface.SIMPLE_MESSAGE, "Text1");
+    private static final MessageInterface MESSAGE_2 = new MessageInterface(MessageInterface.SIMPLE_MESSAGE, "Text2");
+    private static final MessageInterface MESSAGE_3 = new MessageInterface(MessageInterface.SIMPLE_MESSAGE, "Text3");
+    private static final MessageInterface MESSAGE_4 = new MessageInterface(MessageInterface.SIMPLE_MESSAGE, "Text4");
 
     private static Controller serverController;
     private static Controller clientController;
-    private static Server server;
+    private static MessengerServer messengerServer;
     private static Client client;
-    private static ArrayList<Message> clientMessageList = new ArrayList<>();
-    private static ArrayList<Message> serverMessageList = new ArrayList<>();
+    private static ArrayList<MessageInterface> clientMessageList = new ArrayList<>();
+    private static ArrayList<MessageInterface> serverMessageList = new ArrayList<>();
+    private static ArrayList<MessageInterface> typingNotificationList = new ArrayList<>();
 
     @Before
     public void initialize() throws InterruptedException {
-        int SERVER_PORT = 8888;
-        int CONNECTION_PORT = 8888;
+        int SERVER_PORT = 8080;
+        int CONNECTION_PORT = 8080;
         byte[] HOST = {0, 0, 0, 0};
         serverController = new Controller(Controller.Type.SERVER);
-        server = new Server(serverController, CONNECTION_PORT);
         clientController = new Controller(Controller.Type.CLIENT);
+        clientController.afterGettingMessage((MessageInterface message) -> {
+            if (message.getType() == MessageInterface.SIMPLE_MESSAGE)
+                clientMessageList.add(message);
+        });
+        serverController.afterGettingMessage((MessageInterface message) -> {
+            if (message.getType() == MessageInterface.SIMPLE_MESSAGE)
+                serverMessageList.add(message);
+        });
+        clientController.afterGettingNotification(typingNotificationList::add);
+        serverController.afterGettingNotification(typingNotificationList::add);
+        messengerServer = new MessengerServer(serverController, CONNECTION_PORT);
+
+        new Thread(messengerServer::start).start();
+        Thread.sleep(SMALL_MS_TIMEOUT);
         client = new Client(clientController);
-        new Thread(server::start).start();
-        Thread.sleep(MS_TIMEOUT);
+
         new Thread(() ->
                 client.connect(HOST, SERVER_PORT)).start();
         Thread.sleep(MS_TIMEOUT);
-        clientController.afterGettingMessage(clientMessageList::add);
-        serverController.afterGettingMessage(serverMessageList::add);
+
+
     }
 
     @Test
     public void TestSendingMessages() throws InterruptedException {
         clientMessageList.clear();
         serverMessageList.clear();
-        clientController.sendMessage(message1);
+        typingNotificationList.clear();
         Thread.sleep(SMALL_MS_TIMEOUT);
-        clientController.sendMessage(message2);
+        clientController.sendMessage(MESSAGE_1);
         Thread.sleep(SMALL_MS_TIMEOUT);
-        serverController.sendMessage(message3);
+        clientController.sendMessage(MESSAGE_2);
         Thread.sleep(SMALL_MS_TIMEOUT);
-        serverController.sendMessage(message4);
+        serverController.sendMessage(MESSAGE_3);
+        Thread.sleep(SMALL_MS_TIMEOUT);
+        serverController.sendMessage(MESSAGE_4);
         Thread.sleep(SMALL_MS_TIMEOUT);
 
-        assertEquals(clientMessageList, Arrays.asList(message3, message4));
-        assertEquals(serverMessageList, Arrays.asList(message1, message2));
+        assertEquals(clientMessageList, Arrays.asList(MESSAGE_3, MESSAGE_4));
+        assertEquals(serverMessageList, Arrays.asList(MESSAGE_1, MESSAGE_2));
+        assertFalse(typingNotificationList.isEmpty());
     }
 
     @Test
     public void TestSendingMessagesAfterDisconnecting() throws InterruptedException {
         clientMessageList.clear();
         serverMessageList.clear();
-        clientController.sendMessage(message1);
+        typingNotificationList.clear();
         Thread.sleep(SMALL_MS_TIMEOUT);
-        clientController.sendMessage(message2);
+        clientController.sendMessage(MESSAGE_1);
         Thread.sleep(SMALL_MS_TIMEOUT);
-        serverController.sendMessage(message3);
+        clientController.sendMessage(MESSAGE_2);
+        Thread.sleep(SMALL_MS_TIMEOUT);
+        serverController.sendMessage(MESSAGE_3);
         Thread.sleep(SMALL_MS_TIMEOUT);
         client.disconnect();
-        Thread.sleep(MS_TIMEOUT);
-        serverController.sendMessage(message4);
+        Thread.sleep(3 * MS_TIMEOUT);
+        serverController.sendMessage(MESSAGE_4);
         Thread.sleep(SMALL_MS_TIMEOUT);
 
-        assertEquals(clientMessageList, Arrays.asList(message3));
-        assertEquals(serverMessageList, Arrays.asList(message1, message2));
+        assertEquals(clientMessageList, Collections.singletonList(MESSAGE_3));
+        assertEquals(serverMessageList, Arrays.asList(MESSAGE_1, MESSAGE_2));
     }
 
     @Test
     public void TestSendingMessagesAfterStop() throws InterruptedException {
         clientMessageList.clear();
         serverMessageList.clear();
-        clientController.sendMessage(message1);
+        typingNotificationList.clear();
         Thread.sleep(SMALL_MS_TIMEOUT);
-        clientController.sendMessage(message2);
+        clientController.sendMessage(MESSAGE_1);
         Thread.sleep(SMALL_MS_TIMEOUT);
-        serverController.sendMessage(message3);
+        clientController.sendMessage(MESSAGE_2);
         Thread.sleep(SMALL_MS_TIMEOUT);
-        server.stop();
-        Thread.sleep(MS_TIMEOUT);
-        serverController.sendMessage(message4);
+        serverController.sendMessage(MESSAGE_3);
         Thread.sleep(SMALL_MS_TIMEOUT);
-        clientController.sendMessage(message4);
+        messengerServer.stop();
+        Thread.sleep(3 * MS_TIMEOUT);
+        serverController.sendMessage(MESSAGE_4);
+        Thread.sleep(SMALL_MS_TIMEOUT);
+        clientController.sendMessage(MESSAGE_4);
         Thread.sleep(SMALL_MS_TIMEOUT);
 
-        assertEquals(clientMessageList, Arrays.asList(message3));
-        assertEquals(serverMessageList, Arrays.asList(message1, message2));
+        assertEquals(clientMessageList, Collections.singletonList(MESSAGE_3));
+        assertEquals(serverMessageList, Arrays.asList(MESSAGE_1, MESSAGE_2));
     }
 
     @After
     public void close() {
         client.disconnect();
-        server.stop();
+        messengerServer.stop();
     }
 }
