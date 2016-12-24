@@ -7,8 +7,14 @@ import com.imbd.spbau.strategy.RandomStrategy;
 
 import java.util.Random;
 
+/**
+ * Class for creating new level and keeping all necessary information about it
+ */
 public class Map {
 
+    /**
+     * Enumeration of cell's types
+     */
     public enum CellType {
         EMPTY,
         WALL,
@@ -32,19 +38,38 @@ public class Map {
     private Position treasurePosition;
     private Position freezePosition;
 
+    /**
+     * Class for comfortable work with map's position
+     */
     public static class Position {
         private int x;
         private int y;
 
+        /**
+         * Constructor
+         *
+         * @param x x-coordinate
+         * @param y y-coordinate
+         */
         public Position(int x, int y) {
             this.x = x;
             this.y = y;
         }
 
+        /**
+         * Getting x-coordinate value
+         *
+         * @return x-coordinate value
+         */
         public int getX() {
             return x;
         }
 
+        /**
+         * Getting y-coordinate value
+         *
+         * @return y-coordinate value
+         */
         public int getY() {
             return y;
         }
@@ -55,34 +80,75 @@ public class Map {
         }
     }
 
+    /**
+     * Getting number of moves which freeze will work
+     *
+     * @return freeze moves number
+     */
     public int getFreezePower() {
         return FREEZE_POWER;
     }
 
+    /**
+     * Getting position of freeze bonus
+     *
+     * @return freeze position
+     */
     public Position getFreezePosition() {
         return freezePosition;
     }
 
+    /**
+     * Getting all enemies of the map
+     *
+     * @return array of enemies
+     */
     public Enemy[] getEnemyArray() {
         return enemyArray;
     }
 
+    /**
+     * Getting hero of the map
+     *
+     * @return hero
+     */
     public Hero getHero() {
         return hero;
     }
 
+    /**
+     * Get map's length
+     *
+     * @return map's length
+     */
     public int getMapLength() {
         return MAP_LENGTH;
     }
 
+    /**
+     * Get map's height
+     *
+     * @return map's height
+     */
     public int getMapHeight() {
         return MAP_HEIGHT;
     }
 
+    /**
+     * Getting position of treasure
+     *
+     * @return position of treasure
+     */
     public Position getTreasurePosition() {
         return treasurePosition;
     }
 
+    /**
+     * Creating object with a given type
+     *
+     * @param cellType type of object to create
+     * @return position of created object
+     */
     private Position createItem(CellType cellType) {
         while (true) {
             int x = Math.abs(random.nextInt()) % MAP_LENGTH;
@@ -94,6 +160,11 @@ public class Map {
         }
     }
 
+    /**
+     * Creating of map and all objects on it
+     *
+     * @param level game level
+     */
     public Map(int level) {
         for (int i = 0; i < MAP_LENGTH; i++) {
             for (int j = 0; j < MAP_HEIGHT; j++) {
@@ -113,10 +184,23 @@ public class Map {
         freezePosition = createItem(CellType.FREEZE);
     }
 
+    /**
+     * Getting type of cell
+     *
+     * @param x x-coordinate
+     * @param y y-coordinate
+     * @return type of cell with given coordinates
+     */
     public CellType getMapCell(int x, int y) {
         return map[x][y];
     }
 
+    /**
+     * Changing type of given position
+     *
+     * @param position position which will be changed
+     * @param cellType type to set
+     */
     public void setMapCell(Position position, CellType cellType) {
         map[position.getX()][position.getY()] = cellType;
     }
